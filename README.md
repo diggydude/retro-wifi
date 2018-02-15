@@ -18,7 +18,7 @@ Requirements:
 
 * SD card breakout board
 
-* MAX3232-based breakout board with DE-9 or DB-25 connector
+* MAX3232 or similar RS-232 to TTL breakout board with DE-9 or DB-25 connector
 
 * Null modem cable (or normal serial cable and null modem adapter)
 
