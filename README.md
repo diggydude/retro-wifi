@@ -12,7 +12,7 @@ Example target platforms:
 
 * Vintage PC running MS-DOS and Windows 3.1
 
-Parts:
+Requirements:
 
 * ESP8266 / NodeMCU development board
 
@@ -20,7 +20,11 @@ Parts:
 
 * MAX3232-based breakout board with DE-9 or DB-25 connector
 
-* Null modem cable, or normal serial cable and null modem adapter
+* Null modem cable (or normal serial cable and null modem adapter)
+
+* Arduino IDE with ESP*266 add-on and core libraries (see https://arduino-esp8266.readthedocs.io/en/latest/index.html for setup)
+
+Depending on your exact setup, you may also need a DB-25 to DE-9 adapter.
 
 Commodore 64 users will need a terminal program such as CCGS or Novaterm. The other example systems already include terminal software.
 
