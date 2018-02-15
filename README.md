@@ -22,7 +22,7 @@ Requirements:
 
 * Null modem cable (or normal serial cable and null modem adapter)
 
-* Arduino IDE with ESP*266 add-on and core libraries (see https://arduino-esp8266.readthedocs.io/en/latest/index.html for setup)
+* Arduino IDE with ESP8266 add-on and core libraries (see https://arduino-esp8266.readthedocs.io/en/latest/index.html for setup)
 
 Depending on your exact setup, you may also need a DB-25 to DE-9 adapter.
 
