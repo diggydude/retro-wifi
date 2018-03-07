@@ -89,7 +89,6 @@ MenuItem menuItems[34] = {
 
 byte i = 0;
 byte currPage = -1;
-Messenger message = Messenger();
 File root, entry;
 WiFiClient client;
 String content, h, s, p;
@@ -286,12 +285,12 @@ void connectToNetwork()
 {
   Serial.print("Enter SSID: ");
   while (Serial.available()) {
-    ssid = Serial.readUntil('\n');
+    ssid = Serial.readStringUntil('\n');
   }
   Serial.println("");
   Serial.print("Enter password: ");
   while (Serial.available()) {
-    password = Serial.readUntil('\n');
+    password = Serial.readStringUntil('\n');
   }
   _wifiConnect();
   if (SD.exists("wifiprev.dat")) {
@@ -386,11 +385,11 @@ void connectToTelnetAddr()
 {
   Serial.print("Enter host: ");
   while (Serial.available()) {
-    host = Serial.readUntil('\n');
+    host = Serial.readStringUntil('\n');
   }
   Serial.print("Enter port number: ");
   while (Serial.available()) {
-    port = int(Serial.readUntil('\n'));
+    port = int(Serial.readStringUntil('\n'));
   }
   _telnetConnect();
   entry = SD.open("tnethist.dat", FILE_WRITE);
@@ -521,6 +520,7 @@ void saveFile()
 
 void setup()
 {
+  
 } // setup
 
 void loop()
