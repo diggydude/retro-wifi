@@ -1,11 +1,7 @@
-#include <Messenger.h>
 #include <ESP8266WiFi.h>
 #include <SPI.h>
 #include <SD.h>
 #include <XModem.h>
-
-#define MODE_PASSTHRU 0;
-#define MODE_COMMAND  1;
 
 struct MenuLabel 
 {
@@ -41,7 +37,8 @@ MenuLabel menuLabels[23] = {
   {"LIST"},                 // 19
   {"List Files on Card"},   // 20
   {"Load File from Card"},  // 21
-  {"Save File to Card"}     // 22
+  {"Save File to Card"},    // 22
+  {"--------------------"}  // 23
 };
 
 byte menus[7] = {10, 0, 1, 2, 3, 4, 5};
@@ -90,13 +87,12 @@ MenuItem menuItems[34] = {
   {'M', 6, 10}
 };
 
-byte mode = MODE_COMMAND;
 byte i = 0;
 byte currPage = -1;
 Messenger message = Messenger();
 File root, entry;
 WiFiClient client;
-String content, h, p;
+String content, h, s, p;
 char character;
 char* ssid[32];
 char* password[32];
@@ -105,11 +101,102 @@ int port;
 
 // Navigation /////////////////////////////////////////////////////////////////
 
+void command()
+{
+  character = char(Serial.readStringUntil('\n'));
+  switch (currPage) {
+    default:
+    case 0: // Main Menu
+      switch (character) {
+        case 'W': goToPage(1); break;
+        case 'T': goToPage(2); break;
+        case 'I': goToPage(3); break;
+        case 'W': goToPage(4); break;
+        case 'F': goToPage(5); break;
+        case 'S': goToPage(6); break;
+        case 'Q': quit();
+        default:
+          Serial.println("Invalid command.");
+          printMenu();
+          break;
+      }
+    case 1: // WiFi Settings
+      switch (character) {
+        case 'U': usePrevious();      break;
+        case 'S': scanForNetworks();  break; 
+        case 'C': connectToNetwork(); break;
+        case 'M': goToPage(0);        break;
+        default:
+          Serial.println("Invalid command.");
+          printMenu();
+          break;
+      }
+    case 2: // Telnet
+      switch (character) {
+        case 'C': connectToTelnetAddr(); break;
+        case 'B': telnetBookmarks();     break;
+        case 'H': telnetHistory();       break;
+        case 'M': goToPage(0);           break;
+        default:
+          Serial.println("Invalid command.");
+          printMenu();
+          break;
+      }
+    case 3: // Internet Relay Chat
+      switch (character) {
+        case 'P': loadIrcProfile();     break;
+        case 'N': createIrcProfile();   break;
+        case 'C': connectToIrcServer(); break;
+        case 'B': ircBookmarks();       break;
+        case 'H': ircHistory();         break;
+        case 'M': goToPage(0);          break;
+        default:
+          Serial.println("Invalid command.");
+          printMenu();
+          break;
+      }
+    case 4: // World Wide Web
+	  switch (character) {
+        case 'H': httpHeadRequest(); break;
+        case 'G': httpGetRequest();  break;
+        case 'U': httpPutRequest();  break;
+        case 'P': httpPostRequest(); break;
+        case 'M': goToPage(0);       break;
+        default:
+          Serial.println("Invalid command.");
+          printMenu();
+          break;
+      }
+    case 5: // FTP Transfer
+      switch (character) {
+        case 'L': ftpListCommand(); break;
+        case 'G': ftpGetCommand();  break;
+        case 'P': ftpPutCommand();  break;
+        case 'M': goToPage(0);      break;
+        default:
+          Serial.println("Invalid command.");
+          printMenu();
+          break;
+      }
+    case 6: // SD Card
+      switch (character) {
+        case 'D': listFiles(); break;
+        case 'L': loadFile();  break;
+        case 'S': saveFile();  break;
+        case 'M': goToPage(0); break;
+        default:
+          Serial.println("Invalid command.");
+          printMenu();
+          break;
+      }
+  }
+} // command
+
 void printMenu()
 {
-  Serial.println("--------------------");
+  Serial.println(menuLabels[23]);
   Serial.println(menuLabels[menus[currPage]].text);
-  Serial.println("--------------------");
+  Serial.println(menuLabels[23]);
   for (i = 0; i < 35; i++) {
     if (menuItems[i].menuNumber == currPage) {
       Serial.print("[");
@@ -118,7 +205,7 @@ void printMenu()
       Serial.println(menuLabels[menuItems[i].label].text);
     }
   }
-  Serial.println("--------------------");
+  Serial.println(menuLabels[23]);
   Serial.print("Enter selection: ");
 } // printMenu
 
@@ -147,7 +234,6 @@ void _wifiConnect()
 
 void usePrevious()
 {
-  String s, p;
   content = "";
   entry = SD.open("wifiprev.dat");
   if (!entry) {
@@ -218,7 +304,7 @@ void connectToNetwork()
   goToPage(1);
 } // connectToNetwork
 
-// Bookmarks and history
+// Bookmarks and history //////////////////////////////////////////////////////
 
 void _readLine()
 {
@@ -230,7 +316,7 @@ void _readLine()
     content += character;
   }
   h = content.substring(0, content.indexOf("\t") - 1);
-  p = content.substring(content.indexOf("\t") + 1);
+  p = content.substring(content.indexOf("\n") + 1);
   h.toCharArray(host, 128);
   port = int(p);
 } // _readLine
@@ -430,90 +516,6 @@ void saveFile()
 {
   
 } // saveFile
-
-// Command interpreter ////////////////////////////////////////////////////////
-
-void messageReceived()
-{
-  switch (currPage) {
-    default:
-    case 0: // Main Menu
-      if (message.checkString("W")) goToPage(1);
-      else if (message.checkString("T")) goToPage(2);
-      else if (message.checkString("I")) goToPage(3);
-      else if (message.checkString("W")) goToPage(4);
-      else if (message.checkString("F")) goToPage(5);
-      else if (message.checkString("S")) goToPage(6);
-      else if (message.checkString("Q")) quit();
-      else {
-        Serial.println("Invalid command.");
-        printMenu();
-      }
-      break;
-    case 1: // WiFi Settings
-      if (message.checkString("U")) usePrevious();
-      else if (message.checkString("S")) scanForNetworks(); 
-      else if (message.checkString("C")) connectToNetwork();
-      else if (message.checkString("M")) goToPage(0);
-      else {
-        Serial.println("Invalid command.");
-        printMenu();
-      }
-      break;
-    case 2: // Telnet
-      if (message.checkString("C")) connectToTelnetAddr();
-      else if (message.checkString("B")) telnetBookmarks();
-      else if (message.checkString("H")) telnetHistory();
-      else if (message.checkString("M")) goToPage(0);
-      else {
-        Serial.println("Invalid command.");
-        printMenu();
-      }
-      break;
-    case 3: // Internet Relay Chat
-      if (message.checkString("P")) loadIrcProfile();
-      else if (message.checkString("N")) createIrcProfile();
-      else if (message.checkString("C")) connectToIrcServer();
-      else if (message.checkString("B")) ircBookmarks();
-      else if (message.checkString("H")) ircHistory();
-      else if (message.checkString("M")) goToPage(0);
-      else {
-        Serial.println("Invalid command.");
-        printMenu();
-      }
-      break;
-    case 4: // World Wide Web
-      if (message.checkString("H")) httpHeadRequest();
-      else if (message.checkString("G")) httpGetRequest();
-      else if (message.checkString("U")) httpPutRequest();
-      else if (message.checkString("P")) httpPostRequest();
-      else if (message.checkString("M")) goToPage(0);
-      else {
-        Serial.println("Invalid command.");
-        printMenu();
-      }
-      break;
-    case 5: // FTP Transfer
-      if (message.checkString("L")) ftpListCommand();
-      else if (message.checkString("G")) ftpGetCommand();
-      else if (message.checkString("P")) ftpPutCommand();
-      else if (message.checkString("M")) goToPage(0);
-      else {
-       Serial.println("Invalid command.");
-       printMenu();
-      }
-      break;
-    case 6: // SD Card
-      if (message.checkString("D")) listFiles();
-      else if (message.checkString("L")) loadFile();
-      else if (message.checkString("S")) saveFile();
-      else if (message.checkString("M")) goToPage(0);
-      else {
-        Serial.println("Invalid command.");
-        printMenu();
-      }
-      break;
-} // messageReceived
 
 // Application ////////////////////////////////////////////////////////////////
 
