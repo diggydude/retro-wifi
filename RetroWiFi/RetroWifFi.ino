@@ -91,7 +91,7 @@ byte i = 0;
 byte currPage = -1;
 File root, entry;
 WiFiClient client;
-String content, h, s, p;
+String content, h, s, p, c, u, n;
 char character;
 char* ssid[32];
 char* password[32];
@@ -282,12 +282,12 @@ void scanForNetworks()
 void connectToNetwork()
 {
   Serial.print("Enter SSID: ");
-  if (Serial.available()) {
+  while (Serial.available()) {
     s = Serial.readStringUntil('\n');
   }
   Serial.println("");
   Serial.print("Enter password: ");
-  if (Serial.available()) {
+  while (Serial.available()) {
     p = Serial.readStringUntil('\n');
   }
   _wifiConnect();
@@ -314,9 +314,10 @@ void _readLine()
 bool _browseConnections(const char filename)
 {
   entry = SD.open(filename);
-  while (entry,avaialble()) {
+  while (entry.avaialble()) {
     _readLine();
-    Serial.print("[C} Connect  [N] Next  [X] Cancel");
+    Serial.println(h + ':' + p);
+    Serial.println("[C] Connect  [N] Next  [X] Cancel");
       while (Serial.available()) {
       command = char(Serial.readStringUntil('\n'));
     }
@@ -354,7 +355,7 @@ void _telnetConnect()
 void _telnetLink()
 {
   while (true) {
-    while(client.available()) {
+    while (client.available()) {
       Serial.println(client.readStringUntil('\n'));
     }
     delay(100);
@@ -415,27 +416,78 @@ void telnetHistory()
 
 void loadIrcProfile()
 {
-  
+  entry = SD.open("ircprof.dat");
+  while (entry.available()) {
+    c = SD.readStringUntil('\t');
+    u = SD.readStringUntil('\t');
+    n = SD.readStringUntil('\n');
+    Serial.println("Channel: " + c);
+    Serial.println("User: " + u);
+    Serial.println("Nick: " + n);
+    Serial.println("[L] Load  [N] Next  [X] Cancel");
+    
+  }
+
 } // loadIrcProfile
 
 void createIrcProfile()
 {
-  
+  Serial.print("Enter channel name: ");
+  while (Serial.available()) {
+    c = Serial.readStringUntil('\n');
+  }
+  Serial.print("Enter username: ");
+  while (Serial.available()) {
+    u = Serial.readStringUntil('\n');
+  }
+  Serial.print("Enter nick: ");
+  while (Serial.available()) {
+    n = Serial.readStringUntil('\n');
+  }
+  entry = SD.open("ircprof.dat", FILE_WRITE);
+  content = c + '\t' + u + '\t' + n;
+  entry.println(content);
+  entry.close();
+  goToPage(3);
 } // createIrcProfile
 
 void connectToIrcServer()
 {
-  
+  Serial.print("Enter host: ");
+  while (Serial.available()) {
+    h = Serial.readStringUntil('\n');
+  }
+  Serial.print("Enter port number: ");
+  while (Serial.available()) {
+    p = Serial.readStringUntil('\n');
+  }
+  _telnetConnect();
+  entry = SD.open("irchist.dat", FILE_WRITE);
+  content = h + "\t" + p;
+  entry.println(content);
+  entry.close();
+  _telnetLink();
+  goToPage(3);
 } // connectToIrcServer
 
 void ircBookmarks()
 {
-  
+  if (_browseConnections("ircbkmk.dat")) {  
+    _telnetConnect();
+    _telnetLink();
+    return;
+  }
+  goToPage(3); 
 } // ircBookmarks
 
 void ircHistory()
 {
-  
+  if (_browseConnections("irchist.dat")) {  
+    _telnetConnect();
+    _telnetLink();
+    return;
+  }
+  goToPage(3);
 } // ircHistory
 
 // World Wide Web /////////////////////////////////////////////////////////////
