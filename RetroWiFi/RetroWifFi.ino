@@ -218,6 +218,8 @@ void goToPage(byte pageNum)
 
 void _wifiConnect()
 {
+  s.toCharArray(ssid, 32);
+  p.toCharArray(password, 32);
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);  
   Serial.print("Connecting to ");
@@ -240,15 +242,11 @@ void usePrevious()
     gotToPage(1);
     return;
   }
-  while(entry.available()) {
-    content += entry.read();
+  if (entry.available()) {
+    s = entry.readStringUntil('\t');
+    p = entry.readStringUntil('\n');
   }
   entry.close();
-  content.trim();
-  s = content.substring(0, content.indexOf("\t") - 1);
-  p = content.substring(content.indexOf("\n") + 1);
-  s.toCharArray(ssid, 32);
-  p.toCharArray(password, 32);
   _wifiConnect();
   goToPage(1);
 } // usePrevious
@@ -284,20 +282,20 @@ void scanForNetworks()
 void connectToNetwork()
 {
   Serial.print("Enter SSID: ");
-  while (Serial.available()) {
-    ssid = Serial.readStringUntil('\n');
+  if (Serial.available()) {
+    s = Serial.readStringUntil('\n');
   }
   Serial.println("");
   Serial.print("Enter password: ");
-  while (Serial.available()) {
-    password = Serial.readStringUntil('\n');
+  if (Serial.available()) {
+    p = Serial.readStringUntil('\n');
   }
   _wifiConnect();
   if (SD.exists("wifiprev.dat")) {
     SD.remove("wifiprev.dat");
   }
   entry = SD.open("wifiprev.dat", FILE_WRITE);
-  content = ssid + "\t" + password;
+  content = s + "\t" + p;
   entry.println(content);
   entry.close();
   goToPage(1);
@@ -307,17 +305,10 @@ void connectToNetwork()
 
 void _readLine()
 {
-  while (entry.available()) {
-    character = entry.read();
-    if (character == '\n') {
-      break;
-    }
-    content += character;
+  if (entry.available()) {
+    h = entry.readStringUntil('\t');
+    p = entry.readStringUntil('\n');
   }
-  h = content.substring(0, content.indexOf("\t") - 1);
-  p = content.substring(content.indexOf("\n") + 1);
-  h.toCharArray(host, 128);
-  port = int(p);
 } // _readLine
 
 bool _browseConnections(const char filename)
@@ -327,23 +318,21 @@ bool _browseConnections(const char filename)
     _readLine();
     Serial.print("[C} Connect  [N] Next  [X] Cancel");
       while (Serial.available()) {
-      command = Serial.readStringUntil('\n');
+      command = char(Serial.readStringUntil('\n'));
     }
-    if (command == "C") {
-      entry.close();
-      return true;
-    }
-      else if (command == "N") {
-      continue;
-    }
-    else if (command == "X") {
-      entry.close();
-      return false;
-    }
-    else {
-      Serial.println("Invalid command.");
-      entry.close();
-      return false;
+    switch (command) {
+      case 'C':
+        entry.close();
+        return true;
+      case 'N':
+        break;
+      case 'X':
+        entry.close();
+        return false;
+      default:
+        Serial.println("Invalid command.");
+        entry.close();
+        return false;
     }
   }
   entry.close();
@@ -354,6 +343,8 @@ bool _browseConnections(const char filename)
 
 void _telnetConnect()
 {
+  h.toCharArray(host, 128);
+  port = int(p);
   if (!client.connect(host, port)) {
     Serial.println("Connection failed.");
     goToPage(2);
@@ -385,15 +376,15 @@ void connectToTelnetAddr()
 {
   Serial.print("Enter host: ");
   while (Serial.available()) {
-    host = Serial.readStringUntil('\n');
+    h = Serial.readStringUntil('\n');
   }
   Serial.print("Enter port number: ");
   while (Serial.available()) {
-    port = int(Serial.readStringUntil('\n'));
+    p = Serial.readStringUntil('\n');
   }
   _telnetConnect();
   entry = SD.open("tnethist.dat", FILE_WRITE);
-  content = host + "\t" + port;
+  content = h + "\t" + p;
   entry.println(content);
   entry.close();
   _telnetLink();
