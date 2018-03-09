@@ -41,5 +41,5 @@ Proposed capabilities:
 * File transfer from SD card to host computer using XMODEM protocol
 
 This sketch uses the Arduino String class extensively. As the String class uses dynamic memory allocation -- a practice generally
-discouraged in prduction embedded systems -- I'll prbably be refactoring it to use chacter arrays once the workflow has been refined.
+discouraged in production embedded systems -- I'll probably be refactoring it to use character arrays once the workflow has been refined.
 
