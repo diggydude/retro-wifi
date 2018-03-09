@@ -416,6 +416,7 @@ void telnetHistory()
 
 void _ircChat()
 {
+  _telnetConnect();
   entry = SD.open("irchist.dat", FILE_WRITE);
   content = h + "\t" + p;
   entry.println(content);
