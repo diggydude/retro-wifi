@@ -91,7 +91,7 @@ byte i = 0;
 byte currPage = -1;
 File root, entry;
 WiFiClient client;
-String content, h, s, p, c, u, n;
+String content, h, s, p, channel, user, nick;
 char character;
 char* ssid[32];
 char* password[32];
@@ -318,7 +318,7 @@ bool _browseConnections(const char filename)
     _readLine();
     Serial.println(h + ':' + p);
     Serial.println("[C] Connect  [N] Next  [X] Cancel");
-      while (Serial.available()) {
+    while (Serial.available()) {
       command = char(Serial.readStringUntil('\n'));
     }
     switch (command) {
@@ -418,34 +418,41 @@ void loadIrcProfile()
 {
   entry = SD.open("ircprof.dat");
   while (entry.available()) {
-    c = SD.readStringUntil('\t');
-    u = SD.readStringUntil('\t');
-    n = SD.readStringUntil('\n');
-    Serial.println("Channel: " + c);
-    Serial.println("User: " + u);
-    Serial.println("Nick: " + n);
+    channel = SD.readStringUntil('\t');
+    user    = SD.readStringUntil('\t');
+    nick    = SD.readStringUntil('\n');
+    Serial.println("Channel: " + channel);
+    Serial.println("User: " + uusr);
+    Serial.println("Nick: " + nick);
     Serial.println("[L] Load  [N] Next  [X] Cancel");
-    
+    while (Serial.available()) {
+      command = char(Serial.readStringUntil('\n'));
+    }
+    switch (command) {
+      case 'L':
+      case 'X':
+        break;
+    }
   }
-
+  entry.close();
 } // loadIrcProfile
 
 void createIrcProfile()
 {
   Serial.print("Enter channel name: ");
   while (Serial.available()) {
-    c = Serial.readStringUntil('\n');
+    channel = Serial.readStringUntil('\n');
   }
   Serial.print("Enter username: ");
   while (Serial.available()) {
-    u = Serial.readStringUntil('\n');
+    user = Serial.readStringUntil('\n');
   }
   Serial.print("Enter nick: ");
   while (Serial.available()) {
-    n = Serial.readStringUntil('\n');
+    nick = Serial.readStringUntil('\n');
   }
   entry = SD.open("ircprof.dat", FILE_WRITE);
-  content = c + '\t' + u + '\t' + n;
+  content = channel + '\t' + user + '\t' + nick;
   entry.println(content);
   entry.close();
   goToPage(3);
@@ -466,7 +473,47 @@ void connectToIrcServer()
   content = h + "\t" + p;
   entry.println(content);
   entry.close();
-  _telnetLink();
+  while (client,available()) {
+    Serial.println(client.readStringUntil('\n'));
+  }
+  client.print("NICK ");
+  client.println(nick);
+  client.print("USER ");
+  client.print(user);
+  client.println(" 8 *");
+  while (client.available()) {
+    Serial.println(client.readStringUntil('\n'));
+  }
+  client.print("JOIN #");
+  client.println(channel);
+  while (client.available()) {
+    Serial.println(client.readStringUntil('\n'));
+  }
+  while (true) {
+    while (client.available()) {
+      Serial.println(client.readStringUntil('\n'));
+    }
+    delay(100);
+    while (Serial.available()) {
+      content = Serial.readStringUntil('\n');
+      if (content.equalsIgnoreCase("quit")) {
+        content.toUpperCase();
+        client.println(content);
+        while (client.available()) {
+          Serial.println(client.readStringUntil('\n'));
+        }
+        client.stop();
+        goToPage(3);
+        return;
+      }
+      client.print("PRIVMSG #");
+      client.print(channel);
+      client.print(":");
+      client.println(content);
+    }
+    delay(100);
+  }
+  client.stop();
   goToPage(3);
 } // connectToIrcServer
 
