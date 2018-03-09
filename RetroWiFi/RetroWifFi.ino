@@ -91,7 +91,7 @@ byte i = 0;
 byte currPage = -1;
 File root, entry;
 WiFiClient client;
-String content, h, s, p, channel, user, nick, uri;
+String content, h, s, p, channel, user, nick, uri, filename;
 char character;
 char* ssid[32];
 char* password[32];
@@ -551,8 +551,9 @@ void _httpConnect()
   }
   h.toCharArray(host, 128);
   Serial.print("URI: ");
+  while (Serial.available()) {
     uri = Serial.readStringUntil('\n');
-}
+  }
   if (!client.connect(host, 80)) {
     Serial.println("Connection failed.");
     goToPage(4);
@@ -588,11 +589,41 @@ void httpHeadRequest()
 
 void httpGetRequest()
 {
+  Serial.print("Save to file: ");
+  while (Serial.available()) {
+    filename = Serial.readStringUntil('\n');
+  }
+  entry = SD.open(filename, FILE_WRITE);
+  client.print("GET ");
+  client.print(uri);
+  client.print(" HTTP/1.1\r\n");
+  client.print("Host: ");
+  client.print(host);
+  client.print("\r\n");
+  client.print("Connection: close\r\n\r\n");
+  timeout = millis();
+  while (client.available() == 0) {
+    if (millis() - timeout > 5000) {
+      Serial.println("Connection timed out.");
+      client.stop();
+      gotToPage(4);
+      return;
+    }
+  }
+  while (client.available()) {
+    entry.println(client.readStringUntil('\n'));
+  }
+  entry.close();
+  Serial.println("File downloaded.");
+  client.stop();
+  goToPage(4);
   
 } // httpGetRequest
 
 void httpPutRequest()
 {
+  Serial.println("HTTP PUT not implemented.");
+  goToPage(4);
 } // httpPutRequest
 
 void httpPostRequest()
