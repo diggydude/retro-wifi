@@ -414,6 +414,56 @@ void telnetHistory()
 
 // Internet Relay Chat ////////////////////////////////////////////////////////
 
+void _ircChat()
+{
+  entry = SD.open("irchist.dat", FILE_WRITE);
+  content = h + "\t" + p;
+  entry.println(content);
+  entry.close();
+  while (client,available()) {
+    Serial.println(client.readStringUntil('\n'));
+  }
+  client.print("NICK ");
+  client.println(nick);
+  client.print("USER ");
+  client.print(user);
+  client.println(" 8 *");
+  while (client.available()) {
+    Serial.println(client.readStringUntil('\n'));
+  }
+  client.print("JOIN #");
+  client.println(channel);
+  while (client.available()) {
+    Serial.println(client.readStringUntil('\n'));
+  }
+  while (true) {
+    while (client.available()) {
+      Serial.println(client.readStringUntil('\n'));
+    }
+    delay(100);
+    while (Serial.available()) {
+      content = Serial.readStringUntil('\n');
+      if (content.equalsIgnoreCase("quit")) {
+        content.toUpperCase();
+        client.println(content);
+        while (client.available()) {
+          Serial.println(client.readStringUntil('\n'));
+        }
+        client.stop();
+        goToPage(3);
+        return;
+      }
+      client.print("PRIVMSG #");
+      client.print(channel);
+      client.print(":");
+      client.println(content);
+    }
+    delay(100);
+  }
+  client.stop();
+  goToPage(3);
+} // _ircChat
+
 void loadIrcProfile()
 {
   entry = SD.open("ircprof.dat");
@@ -468,60 +518,13 @@ void connectToIrcServer()
   while (Serial.available()) {
     p = Serial.readStringUntil('\n');
   }
-  _telnetConnect();
-  entry = SD.open("irchist.dat", FILE_WRITE);
-  content = h + "\t" + p;
-  entry.println(content);
-  entry.close();
-  while (client,available()) {
-    Serial.println(client.readStringUntil('\n'));
-  }
-  client.print("NICK ");
-  client.println(nick);
-  client.print("USER ");
-  client.print(user);
-  client.println(" 8 *");
-  while (client.available()) {
-    Serial.println(client.readStringUntil('\n'));
-  }
-  client.print("JOIN #");
-  client.println(channel);
-  while (client.available()) {
-    Serial.println(client.readStringUntil('\n'));
-  }
-  while (true) {
-    while (client.available()) {
-      Serial.println(client.readStringUntil('\n'));
-    }
-    delay(100);
-    while (Serial.available()) {
-      content = Serial.readStringUntil('\n');
-      if (content.equalsIgnoreCase("quit")) {
-        content.toUpperCase();
-        client.println(content);
-        while (client.available()) {
-          Serial.println(client.readStringUntil('\n'));
-        }
-        client.stop();
-        goToPage(3);
-        return;
-      }
-      client.print("PRIVMSG #");
-      client.print(channel);
-      client.print(":");
-      client.println(content);
-    }
-    delay(100);
-  }
-  client.stop();
-  goToPage(3);
+  _ircChat();
 } // connectToIrcServer
 
 void ircBookmarks()
 {
   if (_browseConnections("ircbkmk.dat")) {  
-    _telnetConnect();
-    _telnetLink();
+    _ircChat();
     return;
   }
   goToPage(3); 
@@ -530,8 +533,7 @@ void ircBookmarks()
 void ircHistory()
 {
   if (_browseConnections("irchist.dat")) {  
-    _telnetConnect();
-    _telnetLink();
+    _ircChat();
     return;
   }
   goToPage(3);
