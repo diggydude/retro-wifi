@@ -91,16 +91,17 @@ byte i = 0;
 byte currPage = -1;
 File root, entry;
 WiFiClient client;
-String content, h, s, p, channel, user, nick;
+String content, h, s, p, channel, user, nick, uri;
 char character;
 char* ssid[32];
 char* password[32];
 char* host[128];
 int port;
+unsigned long timeout;
 
 // Navigation /////////////////////////////////////////////////////////////////
 
-void command()
+void getCommand()
 {
   character = char(Serial.readStringUntil('\n'));
   switch (currPage) {
@@ -189,7 +190,7 @@ void command()
           break;
       }
   }
-} // command
+} // getCommand
 
 void printMenu()
 {
@@ -542,20 +543,60 @@ void ircHistory()
 
 // World Wide Web /////////////////////////////////////////////////////////////
 
+void _httpConnect()
+{
+  Serial.print("HTTP host: ");
+  while (Serial.available()) {
+    h = Serial.readStringUntil('\n');
+  }
+  h.toCharArray(host, 128);
+  Serial.print("URI: ");
+    uri = Serial.readStringUntil('\n');
+}
+  if (!client.connect(host, 80)) {
+    Serial.println("Connection failed.");
+    goToPage(4);
+  }
+} // _telnetConnect
+
 void httpHeadRequest()
-  
+{
+  client.print("HEAD ");
+  client.print(uri);
+  client.print(" HTTP/1.1\r\n");
+  client.print("Host: ");
+  client.print(host);
+  client.print("\r\n");
+  client.print("Connection: close\r\n\r\n");
+  timeout = millis();
+  while (client.available() == 0) {
+    if (millis() - timeout > 5000) {
+      Serial.println("Connection timed out.");
+      client.stop();
+      gotToPage(4);
+      return;
+    }
+  }
+  while (client.available()) {
+    Serial.println(client.readStringUntil('\r'));
+  }
+  Serial.println();
+  Serial.println("Closing connection.");
+  client.stop();
+  goToPage(4);
 } // httpHeadRequest
 
 void httpGetRequest()
+{
   
 } // httpGetRequest
 
 void httpPutRequest()
-  
+{
 } // httpPutRequest
 
 void httpPostRequest()
-  
+{
 } // httpPostRequest
 
 // FTP Transfer ///////////////////////////////////////////////////////////////
@@ -613,11 +654,14 @@ void saveFile()
 
 void setup()
 {
-  
+  Serial.begin(1200);
+  SD.begin(4);
+  goToPage(0);
 } // setup
 
 void loop()
 {
+  getCommand();
 } // loop
 
 
