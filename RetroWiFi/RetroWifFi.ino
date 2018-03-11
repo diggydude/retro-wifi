@@ -659,9 +659,8 @@ void httpPostUpload()
   while (Serial.available()) {
     filename = Serial.readStringUntil('\n');
   }
-  entry    = SD.open(filename);
-  filename = entry.name();
-  length   = sizeof(filename) + entry.size() + 233;
+  entry  = SD.open(filename);
+  length = sizeof(filename) + entry.size() + 233;
   _httpConnect();
   client.print("POST /upload.php HTTP/1.0\r\n");
   client.print("Host: ");
@@ -681,7 +680,7 @@ void httpPostUpload()
   client.print("Content-Type: application/octet-stream\r\n");
   client.print("Content-Transfer-Encoding: binary\r\n\r\n");
   while (entry.available()) {
-    client.write(emtry.read());
+    client.write(entry.read());
   }
   client.print("\r\n--AaB03x--\r\n");
   entry.close();
