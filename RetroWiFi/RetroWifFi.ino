@@ -761,6 +761,7 @@ void ftpListCommand()
   while (ftp.available()) {
     Serial.println(ftp.readStringUntil('\n'));
   }
+  goToPage(5);
 } // ftpListCommand
 
 void ftpGetCommand()
