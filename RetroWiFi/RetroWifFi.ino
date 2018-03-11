@@ -32,7 +32,7 @@ MenuLabel menuLabels[23] = {
   {"Create New Profile"},   // 14
   {"HEAD"},                 // 15
   {"GET"},                  // 16
-  {"PUT"},                  // 17
+  {"Upload"},               // 17
   {"POST"},                 // 18
   {"LIST"},                 // 19
   {"List Files on Card"},   // 20
@@ -159,7 +159,7 @@ void getCommand()
 	  switch (character) {
         case 'H': httpHeadRequest(); break;
         case 'G': httpGetRequest();  break;
-        case 'U': httpPutRequest();  break;
+        case 'U': httpPostUpload();  break;
         case 'P': httpPostRequest(); break;
         case 'M': goToPage(0);       break;
         default:
@@ -558,10 +558,11 @@ void _httpConnect()
     Serial.println("Connection failed.");
     goToPage(4);
   }
-} // _telnetConnect
+} // _httpConnect
 
 void httpHeadRequest()
 {
+  _httpConnect();
   client.print("HEAD ");
   client.print(uri);
   client.print(" HTTP/1.1\r\n");
@@ -594,6 +595,7 @@ void httpGetRequest()
     filename = Serial.readStringUntil('\n');
   }
   entry = SD.open(filename, FILE_WRITE);
+  _httpConnect();
   client.print("GET ");
   client.print(uri);
   client.print(" HTTP/1.1\r\n");
@@ -617,18 +619,76 @@ void httpGetRequest()
   Serial.println("File downloaded.");
   client.stop();
   goToPage(4);
-  
 } // httpGetRequest
-
-void httpPutRequest()
-{
-  Serial.println("HTTP PUT not implemented.");
-  goToPage(4);
-} // httpPutRequest
 
 void httpPostRequest()
 {
+  Serial.print("Request body: ");
+  while (Serial.available()) {
+    body = Serial.readStringUntil('\n');
+  }
+  _httpConnect();
+  client.print("POST ");
+  client.print(uri);
+  client.print(" HTTP/1.1\r\n");
+  client.print("Host: ");
+  client.print(host);
+  client.print("\r\n");
+  client.print("Connection: close\r\n\r\n");
+  timeout = millis();
+  while (client.available() == 0) {
+    if (millis() - timeout > 5000) {
+      Serial.println("Connection timed out.");
+      client.stop();
+      gotToPage(4);
+      return;
+    }
+  }
+  while (client.available()) {
+    entry.println(client.readStringUntil('\n'));
+  }
+  Serial.println();
+  Serial.println("Closing connection.");
+  client.stop();
+  goToPage(4);
 } // httpPostRequest
+
+void httpPostUpload()
+{
+  Serial.print("Local file: ");
+  while (Serial.available()) {
+    filename = Serial.readStringUntil('\n');
+  }
+  entry    = SD.open(filename);
+  filename = entry.name();
+  length   = sizeof(filename) + entry.size() + 233;
+  _httpConnect();
+  client.print("POST /upload.php HTTP/1.0\r\n");
+  client.print("Host: ");
+  client.print(host);
+  client.print("\r\n");
+  client.print("Content-Type: multipart/form-data, boundary=AaB03x\r\n");
+  client.print("Content-Length: ");
+  client.print(length);
+  client.print("\r\n\r\n");
+  client.print("--AaB03x\r\n");
+  client.print("Content-Disposition: form-data; name=\"MAX_FILE_SIZE\"\r\n\r\n");
+  client.print("1024\r\n");
+  client.print("--AaB03x\r\n");
+  client.print("Content-Disposition: form-data; name=\"upload\"; filename=\"");
+  client.print(filename);
+  client.print("\"\r\n");
+  client.print("Content-Type: application/octet-stream\r\n");
+  client.print("Content-Transfer-Encoding: binary\r\n\r\n");
+  while (entry.available()) {
+    client.write(emtry.read());
+  }
+  client.print("\r\n--AaB03x--\r\n");
+  entry.close();
+  client.stop();
+  Serial.println("File uploaded.");
+  goToPage(4);
+} // httpPostUpload
 
 // FTP Transfer ///////////////////////////////////////////////////////////////
 
