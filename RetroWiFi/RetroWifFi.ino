@@ -90,7 +90,7 @@ MenuItem menuItems[34] = {
 byte i = 0;
 byte currPage = -1;
 File root, entry;
-WiFiClient client;
+WiFiClient client, ftp;
 String content, h, s, p, channel, user, nick, uri, filename;
 char character;
 char* ssid[32];
@@ -691,19 +691,139 @@ void httpPostUpload()
 
 // FTP Transfer ///////////////////////////////////////////////////////////////
 
+void _ftpConnect()
+{
+  content = "";
+  Serial.print("Host: ");
+  while (Serial.available()) {
+    h = Serial.readStringUntil('\n');
+  }
+  Serial.print("Username: ");
+  while (Serial.available()) {
+    user = Serial.readStringUntil('\n');
+  }
+  Serial.print("Password: ");
+  while (Serial.available()) {
+    p = Serial.readStringUntil('\n');
+  }
+  _telnetConnect();
+  while (client.available()) {
+    Serial.println(client.readStringUntil('\n'));
+  }
+  client.print("USER ");
+  client.println(user);
+  while (client.available()) {
+    Serial.println(client.readStringUntil('\n'));
+  }
+  client.print("PASS ");
+  client.println(password);
+  while (client.available()) {
+    Serial.println(client.readStringUntil('\n'));
+  }
+  client.println("PASV");
+  while (client.available()) {
+    i = byte(client.readStringUntil(' '));
+    if (i != 227) {
+      client.stop();
+      Serial.println("Transfer connection failed.");
+      goToPage(5);
+      return;
+    }
+    character = client.read();
+    if (!isDigit(character)) {
+      continue;
+    }
+    h += client.readStringUntil(',');
+    h += ".";
+    h += client.readStringUntil(',');
+    h += ".";
+    h += client.readStringUntil(',');
+    h += ".";
+    h += client.readStringUntil(',');
+    h.toCharArray(host, 128);
+    port = int(client.readStringUntil(',')) * 256;
+  }
+  p = "";
+  while (client.available()) {
+    character = client.read();
+    if (isDigit(character)) {
+      p += character;
+    }
+  }
+  port += int(p);
+  ftp.connect(host, port);
+} // _ftpConnect
+
 void ftpListCommand()
 {
-  
+  _ftpConnect();
+  client.println("LIST");
+  while (ftp.available()) {
+    Serial.println(ftp.readStringUntil('\n'));
+  }
 } // ftpListCommand
 
 void ftpGetCommand()
 {
-  
+  Serial.print("Local file: ");
+  while (Serial.available()) {
+    filename = Serial.readStringUntil('\n');
+  }
+  _ftpConnect();
+  Serial.println("Mode: [A] ASCII  [B] Binary");
+  while (Serial.available()) {
+    command = Serial.readStringUntil('\n');
+  }
+  switch (command) {
+    case 'A':
+    default:
+      client.println("TYPE A");
+    case 'B':
+      client.println("TYPE I");
+  }
+  SD.remove(filename);
+  entry = SD.open(filename, FiLE_WRITE);
+  client.print("RETR ");
+  client.println(filename);
+  while (ftp.available()) {
+    entry.write(ftp.read());
+  }
+  ftp.stop();
+  client.stop();
+  entry.close();
+  Serial.println("File downloaded.");
+  goToPage(5);
 } // ftpGetCommand
 
 void ftpPutCommand()
 {
-  
+  Serial.print("Local file: ");
+  while (Serial.available()) {
+    filename = Serial.readStringUntil('\n');
+  }
+  _ftpConnect();
+  Serial.println("Mode: [A] ASCII  [B] Binary");
+  while (Serial.available()) {
+    command = Serial.readStringUntil('\n');
+  }
+  switch (command) {
+    case 'A':
+    default:
+      client.println("TYPE A");
+    case 'B':
+      client.println("TYPE I");
+  }
+  entry = SD.open(filename);
+  client.print("STOR ");
+  client.println(filename);
+  while (entry.available()) {
+    ftp.write(entry.read());
+  }
+  ftp.stop();
+  client.stop();
+  entry.close();
+  Serial.println("File uploaded.");
+  goToPage(5); 
 } // ftpPutCommand
 
 // SD Card ////////////////////////////////////////////////////////////////////
