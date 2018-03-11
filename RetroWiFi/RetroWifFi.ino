@@ -782,7 +782,7 @@ void ftpGetCommand()
       client.println("TYPE I");
   }
   SD.remove(filename);
-  entry = SD.open(filename, FiLE_WRITE);
+  entry = SD.open(filename, FILE_WRITE);
   client.print("RETR ");
   client.println(filename);
   while (ftp.available()) {
